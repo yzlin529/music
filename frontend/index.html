@@ -359,7 +359,7 @@
                     ${track.category ? `<span>${track.category}</span>` : ''}
                 </div>
                 <p><strong>文件名:</strong> ${track.original_filename}</p>
-                <audio controls src="http://localhost:3000/audio/${track.filename}"></audio>
+                <audio controls src="/uploads/${track.filename}"></audio>
                 <button class="add-to-playlist-btn" data-track-id="${track.id}">添加到歌单</button>
             `;
             libraryList.appendChild(trackCard);
@@ -377,9 +377,9 @@
     // --- Playlist Management Tab Logic ---
     let currentSelectedPlaylistId = null;
 
-    async function loadPlaylists() {
-        try {
-            const response = await fetch('http://localhost:3000/playlists');
+            async function loadPlaylists() {
+            try {
+                const response = await fetch('/playlists');
             const playlists = await response.json();
             const playlistListDiv = document.getElementById('playlist-list');
             playlistListDiv.innerHTML = '';
@@ -413,7 +413,7 @@
                     const searchSection = document.getElementById('playlist-search-section');
                     searchSection.style.display = 'block';
 
-                    const res = await fetch(`http://localhost:3000/playlists/${playlistId}`);
+                    const res = await fetch(`/playlists/${playlistId}`);
                     const data = await res.json();
                     displayPlaylistTracks(data.tracks || data);
                 });
@@ -441,7 +441,7 @@
                 <div class="track-content">
                     <h3>${track.name}</h3>
                     <p><strong>曲风:</strong> ${track.genre || 'N/A'} | <strong>节奏:</strong> ${track.rhythm || 'N/A'}</p>
-                    <audio controls src="http://localhost:3000/audio/${track.filename}"></audio>
+                    <audio controls src="/uploads/${track.filename}"></audio>
                 </div>
                 <div class="track-actions">
                     <button class="delete-btn" data-track-id="${track.id}">删除</button>
@@ -483,7 +483,7 @@
         }
 
         try {
-            const response = await fetch(`http://localhost:3000/list?search=${encodeURIComponent(searchTerm)}`);
+            const response = await fetch(`/list?search=${encodeURIComponent(searchTerm)}`);
             const tracks = await response.json();
             
             resultsDiv.innerHTML = '';
@@ -505,7 +505,7 @@
                         ${track.category ? `<span>${track.category}</span>` : ''}
                     </div>
                     <p><strong>文件名:</strong> ${track.original_filename || track.name}</p>
-                    <audio controls src="http://localhost:3000/audio/${track.filename}"></audio>
+                    <audio controls src="/uploads/${track.filename}"></audio>
                     <button class="add-to-current-playlist-btn" data-track-id="${track.id}" style="background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; float: right;">添加到歌单</button>
                     <div style="clear: both;"></div>
                 `;
@@ -533,7 +533,7 @@
         }
 
         try {
-            const response = await fetch(`http://localhost:3000/playlists/${currentSelectedPlaylistId}/tracks`, {
+            const response = await fetch(`/playlists/${currentSelectedPlaylistId}/tracks`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ track_id: trackId })
@@ -552,7 +552,7 @@
             document.getElementById('playlist-search-results').innerHTML = '';
             
             // Refresh playlist tracks
-            const res = await fetch(`http://localhost:3000/playlists/${currentSelectedPlaylistId}`);
+            const res = await fetch(`/playlists/${currentSelectedPlaylistId}`);
             const data = await res.json();
             displayPlaylistTracks(data.tracks || data);
             
@@ -563,7 +563,7 @@
 
     async function deleteTrackFromPlaylist(playlistId, trackId) {
         try {
-            const response = await fetch(`http://localhost:3000/playlists/${playlistId}/tracks/${trackId}`, {
+            const response = await fetch(`/playlists/${playlistId}/tracks/${trackId}`, {
                 method: 'DELETE'
             });
             
@@ -576,7 +576,7 @@
             alert('歌曲已成功从歌单中删除！');
             
             // Refresh playlist tracks
-            const res = await fetch(`http://localhost:3000/playlists/${playlistId}`);
+            const res = await fetch(`/playlists/${playlistId}`);
             const data = await res.json();
             displayPlaylistTracks(data.tracks || data);
             
@@ -593,7 +593,7 @@
             return;
         }
         try {
-            const response = await fetch('http://localhost:3000/playlists', {
+            const response = await fetch('/playlists', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name })
@@ -633,7 +633,7 @@
         currentTrackIdToAdd = trackId;
         selectedPlaylistForModal = null; // Reset selection
         try {
-            const response = await fetch('http://localhost:3000/playlists');
+            const response = await fetch('/playlists');
             const playlists = await response.json();
             const selectionDiv = document.getElementById('modal-playlist-selection');
             selectionDiv.innerHTML = '';
@@ -667,7 +667,7 @@
             return;
         }
         try {
-             const response = await fetch(`http://localhost:3000/playlists/${selectedPlaylistForModal}/tracks`, {
+             const response = await fetch(`/playlists/${selectedPlaylistForModal}/tracks`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ track_id: currentTrackIdToAdd })
@@ -684,7 +684,7 @@
 
     // --- Generic Functions (Upload, Search, etc.) ---
     function loadLibrary(searchTerm = '') {
-        fetch(`http://localhost:3000/list?search=${encodeURIComponent(searchTerm)}`)
+        fetch(`/list?search=${encodeURIComponent(searchTerm)}`)
             .then(response => response.json())
             .then(data => displayLibrary(data))
             .catch(error => {
@@ -727,7 +727,7 @@
           formData.append('category', category);
           formData.append('notes', notes);
 
-          fetch('http://localhost:3000/upload', {
+          fetch('/upload', {
             method: 'POST',
             body: formData
           })
@@ -773,7 +773,7 @@
         messageEl.textContent = '正在上传并处理文件...';
         messageEl.style.color = 'orange';
 
-        fetch('http://localhost:3000/import', {
+        fetch('/import', {
           method: 'POST',
           body: formData
         })
@@ -791,7 +791,7 @@
     }
 
     function exportToExcel() {
-        window.location.href = 'http://localhost:3000/export';
+        window.location.href = '/export';
     }
 
     // --- Initial Load and Event Listeners ---
