@@ -26,7 +26,7 @@
 
 <div id="container">
   <h1>表格编辑模式</h1>
-  <p><a href="/index.html">&larr; 返回主页</a></p>
+  <p><a href="/frontend/index.html">&larr; 返回主页</a></p>
   
   <div class="form-group" style="margin-top: 20px;">
     <input type="search" id="table-search-input" placeholder="按名称、曲风、节奏、类别、备注搜索...">
@@ -67,7 +67,7 @@
 
   function fetchAndRenderTable(searchTerm = '') {
     const tableBody = document.querySelector('#tracks-table tbody');
-    let url = 'http://localhost:3000/list';
+    let url = '/list';
     if (searchTerm && searchTerm.trim() !== '') {
       url += `?search=${encodeURIComponent(searchTerm)}`;
     }
@@ -107,7 +107,7 @@
       updatedData[field] = cell.textContent;
     });
 
-    fetch(`http://localhost:3000/track/${id}`, {
+    fetch(`/track/${id}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
