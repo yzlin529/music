@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>表格编辑模式 - 音频工作室</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; color: #333; }
+    #container { max-width: 1200px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+    h1 { color: #007BFF; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+    th { background-color: #007BFF; color: white; }
+    tr:nth-child(even) { background-color: #f2f2f2; }
+    td[contenteditable="true"] { background-color: #fffde7; cursor: pointer; }
+    .action-button { padding: 8px 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    .action-button:hover { background-color: #218838; }
+    .status-message { padding: 10px; margin-top: 10px; border-radius: 4px; display: none; }
+    .status-message.success { background-color: #d4edda; color: #155724; }
+    .status-message.error { background-color: #f8d7da; color: #721c24; }
+    a { color: #007BFF; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div id="container">
+  <h1>表格编辑模式</h1>
+  <p><a href="/index.html">&larr; 返回主页</a></p>
+  
+  <div class="form-group" style="margin-top: 20px;">
+    <input type="search" id="table-search-input" placeholder="按名称、曲风、节奏、类别、备注搜索...">
+  </div>
+
+  <div id="status-message" class="status-message"></div>
+  <div style="overflow-x:auto;">
+    <table id="tracks-table">
+      <thead>
+        <tr>
+          <th>名称</th>
+          <th>曲风</th>
+          <th>节奏</th>
+          <th>类别</th>
+          <th>备注</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Data will be populated by JavaScript -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    fetchAndRenderTable(); // Initial load
+
+    // Add event listener for the search input
+    const searchInput = document.getElementById('table-search-input');
+    const debouncedSearch = debounce(() => {
+      fetchAndRenderTable(searchInput.value);
+    }, 300); // 300ms delay
+    
+    searchInput.addEventListener('input', debouncedSearch);
+  });
+
+  function fetchAndRenderTable(searchTerm = '') {
+    const tableBody = document.querySelector('#tracks-table tbody');
+    let url = 'http://localhost:3000/list';
+    if (searchTerm && searchTerm.trim() !== '') {
+      url += `?search=${encodeURIComponent(searchTerm)}`;
+    }
+
+    fetch(url)
+      .then(response => response.json())
+      .then(tracks => {
+        tableBody.innerHTML = ''; // Clear existing table
+        tracks.forEach(track => {
+          const row = document.createElement('tr');
+          row.setAttribute('data-id', track.id);
+          row.innerHTML = `
+            <td contenteditable="true" data-field="name">${track.name || ''}</td>
+            <td contenteditable="true" data-field="genre">${track.genre || ''}</td>
+            <td contenteditable="true" data-field="rhythm">${track.rhythm || ''}</td>
+            <td contenteditable="true" data-field="category">${track.category || ''}</td>
+            <td contenteditable="true" data-field="notes">${track.notes || ''}</td>
+            <td><button class="action-button" onclick="saveRow(this)">保存</button></td>
+          `;
+          tableBody.appendChild(row);
+        });
+      })
+      .catch(error => {
+        console.error('获取媒体库失败:', error);
+        tableBody.innerHTML = '<tr><td colspan="6">加载数据失败，请检查后端服务。</td></tr>';
+      });
+  }
+
+  function saveRow(button) {
+    const row = button.closest('tr');
+    const id = row.getAttribute('data-id');
+    const cells = row.querySelectorAll('td[contenteditable="true"]');
+    
+    const updatedData = {};
+    cells.forEach(cell => {
+      const field = cell.getAttribute('data-field');
+      updatedData[field] = cell.textContent;
+    });
+
+    fetch(`http://localhost:3000/track/${id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updatedData),
+    })
+    .then(response => {
+        if (!response.ok) {
+            // Get error message from body and throw it
+            return response.json().then(err => { throw new Error(err.message || '保存失败') });
+        }
+        return response.json();
+    })
+    .then(data => {
+      showStatus(data.message, 'success');
+    })
+    .catch(error => {
+      console.error('更新失败:', error);
+      showStatus(error.message, 'error');
+    });
+  }
+
+  // Simple debounce function
+  function debounce(func, delay) {
+    let debounceTimer;
+    return function() {
+      const context = this;
+      const args = arguments;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => func.apply(context, args), delay);
+    }
+  }
+
+  function showStatus(message, type) {
+    const statusEl = document.getElementById('status-message');
+    statusEl.textContent = message;
+    statusEl.className = `status-message ${type}`;
+    statusEl.style.display = 'block';
+    setTimeout(() => {
+      statusEl.style.display = 'none';
+    }, 4000);
+  }
+</script>
+
+</body>
+</html> 

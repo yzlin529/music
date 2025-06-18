@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>音频工作室平台</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f4; color: #333; }
+    #container { max-width: 900px; margin: auto; background: #fff; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.1); overflow: hidden; }
+    h2 { border-bottom: 2px solid #007BFF; padding-bottom: 10px; color: #007BFF; }
+    
+    /* Tab Navigation */
+    .tab-nav { overflow: hidden; border-bottom: 1px solid #ccc; background-color: #f9f9f9; }
+    .tab-nav button { background-color: inherit; float: left; border: none; outline: none; cursor: pointer; padding: 14px 16px; transition: 0.3s; font-size: 17px; }
+    .tab-nav button:hover { background-color: #ddd; }
+    .tab-nav button.active { background-color: #007BFF; color: white; }
+
+    /* Tab Content */
+    .tab-content { padding: 20px; }
+
+    /* Shared Styles */
+    .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
+    .form-group label { margin-bottom: 5px; font-weight: bold; }
+    .form-group input[type="text"], .form-group input[type="file"], .form-group input[type="search"] { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 12px 20px; background-color: #007BFF; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-right: 10px; }
+    button:hover { background-color: #0056b3; }
+    .message { margin-top: 15px; padding: 10px; border-radius: 4px; }
+    
+    /* Track Item Styling */
+    .track-item { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #f9f9f9; }
+    .track-item h3 { margin-top: 0; }
+    .track-item p { margin: 5px 0; }
+    .track-item audio { width: 100%; margin-top: 15px; }
+    .track-metadata span { background-color: #e7e7e7; padding: 3px 8px; border-radius: 12px; font-size: 12px; margin-right: 8px; }
+
+    hr { margin: 30px 0; border: 1px solid #eee; }
+
+    .playlist-container {
+        display: flex;
+        gap: 20px;
+    }
+    .playlist-sidebar {
+        width: 300px;
+        border-right: 1px solid #eee;
+        padding-right: 20px;
+    }
+    .create-playlist-section {
+        display: flex;
+        margin-bottom: 15px;
+    }
+    .create-playlist-section input {
+        flex-grow: 1;
+    }
+    #playlist-list .playlist-item {
+        padding: 10px;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+    #playlist-list .playlist-item:hover, #playlist-list .playlist-item.active {
+        background-color: #f0f0f0;
+    }
+    .playlist-main-content {
+        flex-grow: 1;
+    }
+    #share-playlist-btn {
+        margin-left: 10px;
+        background-color: #28a745;
+        color: white;
+    }
+
+    .modal {
+        display: none; 
+        position: fixed; 
+        z-index: 100; 
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 400px;
+        border-radius: 8px;
+    }
+
+    .close-button {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .close-button:hover,
+    .close-button:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    #modal-playlist-selection .playlist-select-item {
+        padding: 8px;
+        cursor: pointer;
+    }
+     #modal-playlist-selection .playlist-select-item:hover,  #modal-playlist-selection .playlist-select-item.selected {
+        background-color: #e9e9e9;
+    }
+
+    #results {
+        padding: 15px;
+    }
+    .track-card audio {
+        width: 100%;
+        margin-top: 10px;
+    }
+    .track-card .add-to-playlist-btn {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 10px;
+        float: right;
+    }
+     .track-card .add-to-playlist-btn:hover {
+        background-color: #0056b3;
+    }
+
+    #library-management-content {
+        display: none;
+    }
+
+    #playlist-search-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+    }
+
+    #playlist-search-section h4 {
+        margin-top: 0;
+        color: #333;
+    }
+
+    #playlist-search-results {
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 10px;
+    }
+
+    .playlist-track-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        background: #f9f9f9;
+    }
+
+    .playlist-track-item .track-content {
+        flex-grow: 1;
+    }
+
+    .playlist-track-item .track-actions {
+        margin-left: 10px;
+    }
+
+    .playlist-track-item .delete-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    .playlist-track-item .delete-btn:hover {
+        background-color: #c82333;
+    }
+
+  </style>
+</head>
+<body>
+
+<div id="container">
+  <div class="tab-nav">
+    <button class="tab-button active" onclick="openTab('music-search')">音乐搜索和播放</button>
+    <button class="tab-button" onclick="openTab('library-management')">音乐库管理</button>
+    <button class="tab-button" onclick="openTab('playlist-management')">歌单管理</button>
+  </div>
+
+  <!-- Tab 1: Playback -->
+  <div id="music-search-content" class="tab-content">
+    <h2>媒体库</h2>
+    <div class="form-group">
+      <input type="search" id="search-input" placeholder="按名称、曲风、类别、备注搜索...">
+    </div>
+    <div id="library-list"></div>
+  </div>
+
+  <!-- Tab 2: Management -->
+  <div id="library-management-content" class="tab-content" style="display: none;">
+    
+    <div id="upload-section">
+      <h2>人工录入</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label for="audio-file">选择音频文件 (可多选)</label>
+          <input type="file" id="audio-file" accept="audio/*" multiple>
+        </div>
+        <div class="form-group">
+          <label for="track-name">名称 (可选)</label>
+          <input type="text" id="track-name" placeholder="例如: Main Riff Idea">
+        </div>
+        <div class.form-group">
+          <label for="track-genre">曲风</label>
+          <input type="text" id="track-genre" placeholder="例如: 流行, 摇滚, 古典">
+        </div>
+        <div class="form-group">
+          <label for="track-rhythm">节奏</label>
+          <input type="text" id="track-rhythm" placeholder="例如: 120bpm, 4/4">
+        </div>
+        <div class="form-group">
+          <label for="track-category">类别</label>
+          <input type="text" id="track-category" placeholder="例如: 人声, 吉他, 鼓">
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label for="track-notes">备注</label>
+          <input type="text" id="track-notes" placeholder="任何关于此音轨的备注...">
+        </div>
+      </div>
+      <button onclick="uploadAudio()">上传</button>
+      <p id="message" class="message"></p>
+    </div>
+
+    <hr>
+    
+    <div id="excel-section">
+        <h2>Excel 批量处理</h2>
+        <p>通过 Excel 文件批量更新数据。推荐流程：先导出，修改后再导入。</p>
+        <div class="form-group">
+            <label for="excel-file-input">选择 .xlsx 文件</label>
+            <input type="file" id="excel-file-input" accept=".xlsx, .csv">
+        </div>
+        <button onclick="importFromExcel()">上传并更新</button>
+        <button onclick="exportToExcel()" style="background-color: #5a6268;">导出为 Excel</button>
+        <p id="import-message" class="message"></p>
+    </div>
+
+    <hr>
+
+    <div id="table-edit-section">
+        <h2>直接修改</h2>
+        <p>进入表格视图，直接在线编辑所有音轨的详细信息。</p>
+        <button onclick="window.location.href='/table.html'" style="background-color: #17a2b8;">进入表格编辑模式</button>
+    </div>
+
+  </div>
+
+  <div id="playlist-management-content" class="tab-content" style="display:none;">
+    <h2>歌单管理</h2>
+    <div class="playlist-container">
+        <div class="playlist-sidebar">
+            <h3>我的歌单</h3>
+            <div class="create-playlist-section">
+                <input type="text" id="new-playlist-name" placeholder="输入新歌单名称...">
+                <button id="create-playlist-btn">创建新歌单</button>
+            </div>
+            <div id="playlist-list">
+                <!-- Playlists will be dynamically loaded here -->
+            </div>
+        </div>
+        <div class="playlist-main-content">
+            <h3 id="current-playlist-name">选择一个歌单查看详情</h3>
+             <button id="share-playlist-btn" style="display:none;">分享歌单</button>
+            
+            <!-- Search section for adding songs to playlist -->
+            <div id="playlist-search-section" style="display:none; margin: 20px 0; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #f9f9f9;">
+                <h4>添加歌曲到歌单</h4>
+                <div class="form-group">
+                    <input type="search" id="playlist-search-input" placeholder="搜索歌曲以添加到当前歌单...">
+                </div>
+                <div id="playlist-search-results"></div>
+            </div>
+            
+            <div id="playlist-details">
+                <!-- Tracks of the selected playlist will be shown here -->
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <div id="add-to-playlist-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h3>添加到歌单</h3>
+        <div id="modal-playlist-selection">
+            <!-- List of playlists to add to -->
+        </div>
+        <button id="confirm-add-to-playlist-btn">确认添加</button>
+    </div>
+  </div>
+</div>
+
+<script>
+    let currentTrackIdToAdd = null;
+    let selectedPlaylistForModal = null;
+
+    // --- Tab Switching Logic ---
+    function openTab(tabName) {
+        let i, tabcontent, tabbuttons;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tabbuttons = document.getElementsByClassName("tab-button");
+        for (i = 0; i < tabbuttons.length; i++) {
+            tabbuttons[i].className = tabbuttons[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName + '-content').style.display = "block";
+        event.currentTarget.className += " active";
+
+        if (tabName === 'music-search') {
+            loadLibrary();
+        }
+        if (tabName === 'playlist-management') {
+            loadPlaylists();
+        }
+    }
+
+    // --- Music Search Tab Logic ---
+    function displayLibrary(tracks) {
+        const libraryList = document.getElementById('library-list');
+        libraryList.innerHTML = '';
+        if (tracks.length === 0) {
+            libraryList.innerHTML = '<p>媒体库中没有音轨。请先上传。</p>';
+            return;
+        }
+
+        tracks.forEach(track => {
+            const trackCard = document.createElement('div');
+            trackCard.className = 'track-item';
+            trackCard.innerHTML = `
+                <h3>${track.name}</h3>
+                <div class="track-metadata">
+                    ${track.genre ? `<span>${track.genre}</span>` : ''}
+                    ${track.rhythm ? `<span>${track.rhythm}</span>` : ''}
+                    ${track.category ? `<span>${track.category}</span>` : ''}
+                </div>
+                <p><strong>文件名:</strong> ${track.original_filename}</p>
+                <audio controls src="http://localhost:3000/audio/${track.filename}"></audio>
+                <button class="add-to-playlist-btn" data-track-id="${track.id}">添加到歌单</button>
+            `;
+            libraryList.appendChild(trackCard);
+        });
+
+        // Add event listeners to the new buttons
+        document.querySelectorAll('.add-to-playlist-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const trackId = e.target.getAttribute('data-track-id');
+                openAddToPlaylistModal(trackId);
+            });
+        });
+    }
+
+    // --- Playlist Management Tab Logic ---
+    let currentSelectedPlaylistId = null;
+
+    async function loadPlaylists() {
+        try {
+            const response = await fetch('http://localhost:3000/playlists');
+            const playlists = await response.json();
+            const playlistListDiv = document.getElementById('playlist-list');
+            playlistListDiv.innerHTML = '';
+            playlists.forEach(playlist => {
+                const playlistDiv = document.createElement('div');
+                playlistDiv.className = 'playlist-item';
+                playlistDiv.textContent = playlist.name;
+                playlistDiv.dataset.playlistId = playlist.id;
+                playlistListDiv.appendChild(playlistDiv);
+            });
+
+            // Add click event to each playlist item
+            document.querySelectorAll('#playlist-list .playlist-item').forEach(item => {
+                item.addEventListener('click', async (e) => {
+                    // Highlight selected item
+                    document.querySelectorAll('#playlist-list .playlist-item').forEach(el => el.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    const playlistId = e.target.dataset.playlistId;
+                    const playlistName = e.target.textContent;
+                    currentSelectedPlaylistId = playlistId;
+                    
+                    document.getElementById('current-playlist-name').textContent = `歌单: ${playlistName}`;
+                    
+                    const shareBtn = document.getElementById('share-playlist-btn');
+                    shareBtn.style.display = 'inline-block';
+                    shareBtn.dataset.playlistId = playlistId;
+                    shareBtn.dataset.playlistName = playlistName;
+
+                    // Show the search section for this playlist
+                    const searchSection = document.getElementById('playlist-search-section');
+                    searchSection.style.display = 'block';
+
+                    const res = await fetch(`http://localhost:3000/playlists/${playlistId}`);
+                    const data = await res.json();
+                    displayPlaylistTracks(data.tracks || data);
+                });
+            });
+
+        } catch (error) {
+            console.error('加载歌单失败:', error);
+            document.getElementById('playlist-list').innerHTML = '<p>加载歌单失败。</p>';
+        }
+    }
+    
+    function displayPlaylistTracks(tracks) {
+        const detailsDiv = document.getElementById('playlist-details');
+        detailsDiv.innerHTML = '';
+        
+        if (tracks.length === 0) {
+            detailsDiv.innerHTML = '<p>这个歌单里还没有歌曲。</p>';
+            return;
+        }
+        
+        tracks.forEach(track => {
+            const trackDiv = document.createElement('div');
+            trackDiv.className = 'playlist-track-item';
+            trackDiv.innerHTML = `
+                <div class="track-content">
+                    <h3>${track.name}</h3>
+                    <p><strong>曲风:</strong> ${track.genre || 'N/A'} | <strong>节奏:</strong> ${track.rhythm || 'N/A'}</p>
+                    <audio controls src="http://localhost:3000/audio/${track.filename}"></audio>
+                </div>
+                <div class="track-actions">
+                    <button class="delete-btn" data-track-id="${track.id}">删除</button>
+                </div>
+            `;
+            detailsDiv.appendChild(trackDiv);
+        });
+
+        // Add event listeners for delete buttons
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const trackId = e.target.getAttribute('data-track-id');
+                if (confirm('确定要从歌单中删除这首歌曲吗？')) {
+                    await deleteTrackFromPlaylist(currentSelectedPlaylistId, trackId);
+                }
+            });
+        });
+    }
+
+    // Search functionality within playlist
+    function setupPlaylistSearch() {
+        const searchInput = document.getElementById('playlist-search-input');
+        let searchTimeout;
+        
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                performPlaylistSearch(e.target.value);
+            }, 300); // Debounce search
+        });
+    }
+
+    async function performPlaylistSearch(searchTerm) {
+        const resultsDiv = document.getElementById('playlist-search-results');
+        
+        if (!searchTerm.trim()) {
+            resultsDiv.innerHTML = '';
+            return;
+        }
+
+        try {
+            const response = await fetch(`http://localhost:3000/list?search=${encodeURIComponent(searchTerm)}`);
+            const tracks = await response.json();
+            
+            resultsDiv.innerHTML = '';
+            
+            if (tracks.length === 0) {
+                resultsDiv.innerHTML = '<p>没有找到匹配的歌曲。</p>';
+                return;
+            }
+
+            // 使用与主页完全相同的显示格式
+            tracks.forEach(track => {
+                const trackCard = document.createElement('div');
+                trackCard.className = 'track-item'; // 复用主页样式
+                trackCard.innerHTML = `
+                    <h3>${track.name}</h3>
+                    <div class="track-metadata">
+                        ${track.genre ? `<span>${track.genre}</span>` : ''}
+                        ${track.rhythm ? `<span>${track.rhythm}</span>` : ''}
+                        ${track.category ? `<span>${track.category}</span>` : ''}
+                    </div>
+                    <p><strong>文件名:</strong> ${track.original_filename || track.name}</p>
+                    <audio controls src="http://localhost:3000/audio/${track.filename}"></audio>
+                    <button class="add-to-current-playlist-btn" data-track-id="${track.id}" style="background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; float: right;">添加到歌单</button>
+                    <div style="clear: both;"></div>
+                `;
+                resultsDiv.appendChild(trackCard);
+            });
+
+            // Add event listeners for add buttons
+            document.querySelectorAll('.add-to-current-playlist-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const trackId = e.target.getAttribute('data-track-id');
+                    await addTrackToCurrentPlaylist(trackId);
+                });
+            });
+
+        } catch (error) {
+            console.error('搜索失败:', error);
+            resultsDiv.innerHTML = '<p>搜索失败，请稍后重试。</p>';
+        }
+    }
+
+    async function addTrackToCurrentPlaylist(trackId) {
+        if (!currentSelectedPlaylistId) {
+            alert('请先选择一个歌单。');
+            return;
+        }
+
+        try {
+            const response = await fetch(`http://localhost:3000/playlists/${currentSelectedPlaylistId}/tracks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ track_id: trackId })
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.message);
+            }
+            
+            alert('歌曲已成功添加到歌单！');
+            
+            // Clear search results
+            document.getElementById('playlist-search-input').value = '';
+            document.getElementById('playlist-search-results').innerHTML = '';
+            
+            // Refresh playlist tracks
+            const res = await fetch(`http://localhost:3000/playlists/${currentSelectedPlaylistId}`);
+            const data = await res.json();
+            displayPlaylistTracks(data.tracks || data);
+            
+        } catch (error) {
+            alert(`添加失败: ${error.message}`);
+        }
+    }
+
+    async function deleteTrackFromPlaylist(playlistId, trackId) {
+        try {
+            const response = await fetch(`http://localhost:3000/playlists/${playlistId}/tracks/${trackId}`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.message);
+            }
+            
+            alert('歌曲已成功从歌单中删除！');
+            
+            // Refresh playlist tracks
+            const res = await fetch(`http://localhost:3000/playlists/${playlistId}`);
+            const data = await res.json();
+            displayPlaylistTracks(data.tracks || data);
+            
+        } catch (error) {
+            alert(`删除失败: ${error.message}`);
+        }
+    }
+
+    document.getElementById('create-playlist-btn').addEventListener('click', async () => {
+        const input = document.getElementById('new-playlist-name');
+        const name = input.value.trim();
+        if (!name) {
+            alert('请输入歌单名称！');
+            return;
+        }
+        try {
+            const response = await fetch('http://localhost:3000/playlists', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message);
+            alert('歌单创建成功！');
+            input.value = '';
+            loadPlaylists(); // Refresh the list
+        } catch (error) {
+            alert(`创建失败: ${error.message}`);
+        }
+    });
+
+    document.getElementById('share-playlist-btn').addEventListener('click', (e) => {
+        const playlistId = e.target.dataset.playlistId;
+        const playlistName = e.target.dataset.playlistName;
+        const shareUrl = `${window.location.origin}/frontend/share.html?id=${playlistId}`;
+        prompt(`分享歌单 "${playlistName}" 的链接 (复制下面的链接):`, shareUrl);
+    });
+
+
+    // --- "Add to Playlist" Modal Logic ---
+    const modal = document.getElementById('add-to-playlist-modal');
+    const closeBtn = document.querySelector('.modal .close-button');
+
+    closeBtn.onclick = function() {
+        modal.style.display = "none";
+    }
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+    async function openAddToPlaylistModal(trackId) {
+        currentTrackIdToAdd = trackId;
+        selectedPlaylistForModal = null; // Reset selection
+        try {
+            const response = await fetch('http://localhost:3000/playlists');
+            const playlists = await response.json();
+            const selectionDiv = document.getElementById('modal-playlist-selection');
+            selectionDiv.innerHTML = '';
+            if (playlists.length === 0) {
+                 selectionDiv.innerHTML = '<p>还没有创建任何歌单。</p>';
+                 return;
+            }
+
+            playlists.forEach(playlist => {
+                const item = document.createElement('div');
+                item.className = 'playlist-select-item';
+                item.textContent = playlist.name;
+                item.dataset.playlistId = playlist.id;
+                item.onclick = (e) => {
+                    selectedPlaylistForModal = playlist.id;
+                    // Highlight selection
+                     document.querySelectorAll('.playlist-select-item').forEach(el => el.classList.remove('selected'));
+                     e.target.classList.add('selected');
+                };
+                selectionDiv.appendChild(item);
+            });
+            modal.style.display = 'block';
+        } catch (error) {
+            alert('无法加载歌单列表。');
+        }
+    }
+
+    document.getElementById('confirm-add-to-playlist-btn').addEventListener('click', async () => {
+        if (!currentTrackIdToAdd || !selectedPlaylistForModal) {
+            alert('请先选择一个歌单。');
+            return;
+        }
+        try {
+             const response = await fetch(`http://localhost:3000/playlists/${selectedPlaylistForModal}/tracks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ track_id: currentTrackIdToAdd })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message);
+            alert('成功添加到歌单！');
+            modal.style.display = 'none';
+        } catch (error) {
+            alert(`添加失败: ${error.message}`);
+        }
+    });
+
+
+    // --- Generic Functions (Upload, Search, etc.) ---
+    function loadLibrary(searchTerm = '') {
+        fetch(`http://localhost:3000/list?search=${encodeURIComponent(searchTerm)}`)
+            .then(response => response.json())
+            .then(data => displayLibrary(data))
+            .catch(error => {
+                console.error('获取媒体库失败:', error);
+                const libraryList = document.getElementById('library-list');
+                libraryList.innerHTML = '<p>加载媒体库失败，请检查后端服务是否开启。</p>';
+            });
+    }
+
+    function uploadAudio() {
+        const fileInput = document.getElementById('audio-file');
+        const files = fileInput.files;
+        const messageEl = document.getElementById('message');
+        
+        if (files.length === 0) {
+          messageEl.textContent = '请至少选择一个音频文件。';
+          messageEl.style.color = 'red';
+          // Even if there's an error, we refresh the library to ensure sync
+          loadLibrary();
+          return;
+        }
+
+        messageEl.textContent = `开始上传 ${files.length} 个文件...`;
+        messageEl.style.color = 'orange';
+
+        const name = document.getElementById('track-name').value;
+        const genre = document.getElementById('track-genre').value;
+        const rhythm = document.getElementById('track-rhythm').value;
+        const category = document.getElementById('track-category').value;
+        const notes = document.getElementById('track-notes').value;
+
+        const singleFileName = files.length === 1 ? name : '';
+
+        Array.from(files).forEach((file, index) => {
+          const formData = new FormData();
+          formData.append('audio', file);
+          formData.append('name', singleFileName || file.name); 
+          formData.append('genre', genre);
+          formData.append('rhythm', rhythm);
+          formData.append('category', category);
+          formData.append('notes', notes);
+
+          fetch('http://localhost:3000/upload', {
+            method: 'POST',
+            body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+            messageEl.textContent = `${file.name} 上传成功!`;
+            messageEl.style.color = 'green';
+          })
+          .catch(error => {
+            console.error(`上传 ${file.name} 失败:`, error);
+            messageEl.textContent = `${file.name} 上传失败。`;
+            messageEl.style.color = 'red';
+          })
+          .finally(() => {
+            // After each file attempt, clear the inputs and refresh the library
+            if (index === files.length - 1) {
+                fileInput.value = ''; // Clear file input
+                document.getElementById('track-name').value = '';
+                document.getElementById('track-genre').value = '';
+                document.getElementById('track-rhythm').value = '';
+                document.getElementById('track-category').value = '';
+                document.getElementById('track-notes').value = '';
+                loadLibrary();
+            }
+          });
+        });
+    }
+
+    function importFromExcel() {
+        const fileInput = document.getElementById('excel-file-input');
+        const file = fileInput.files[0];
+        const messageEl = document.getElementById('import-message');
+
+        if (!file) {
+          messageEl.textContent = '请选择一个 Excel 文件。';
+          messageEl.style.color = 'red';
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('excel-file', file);
+
+        messageEl.textContent = '正在上传并处理文件...';
+        messageEl.style.color = 'orange';
+
+        fetch('http://localhost:3000/import', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          messageEl.textContent = data.message;
+          messageEl.style.color = 'green';
+          loadLibrary(); // Refresh library to show changes
+        })
+        .catch(error => {
+          console.error('从Excel导入失败:', error);
+          messageEl.textContent = '更新失败，请检查文件格式或查看控制台。';
+          messageEl.style.color = 'red';
+        });
+    }
+
+    function exportToExcel() {
+        window.location.href = 'http://localhost:3000/export';
+    }
+
+    // --- Initial Load and Event Listeners ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Load the library on initial page load
+        loadLibrary();
+
+        // Add event listener for the search input
+        const searchInput = document.getElementById('search-input');
+        searchInput.addEventListener('input', (e) => {
+            loadLibrary(e.target.value);
+        });
+
+        // Setup playlist search functionality
+        setupPlaylistSearch();
+    });
+</script>
+
+</body>
+</html> 

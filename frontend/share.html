@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歌单分享</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f4; color: #333; display: flex; justify-content: center; padding: 20px;}
+        #container { max-width: 800px; width: 100%; margin: auto; background: #fff; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.1); overflow: hidden; }
+        #playlist-header { padding: 20px; background-color: #007BFF; color: white; }
+        #playlist-header h1 { margin: 0; }
+        #track-list { padding: 20px; }
+        .track-item { border-bottom: 1px solid #eee; padding: 15px 0; }
+        .track-item:last-child { border-bottom: none; }
+        .track-item h3 { margin: 0 0 5px 0; }
+        .track-item p { margin: 0; color: #666; font-size: 14px; }
+        .track-item audio { width: 100%; margin-top: 10px; }
+        #loading { text-align: center; padding: 50px; font-size: 18px; }
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <div id="playlist-header">
+        <h1 id="playlist-name">正在加载歌单...</h1>
+    </div>
+    <div id="track-list">
+        <div id="loading">请稍候...</div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const trackListDiv = document.getElementById('track-list');
+        const playlistNameH1 = document.getElementById('playlist-name');
+        const loadingDiv = document.getElementById('loading');
+
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const playlistId = params.get('id');
+
+            if (!playlistId) {
+                playlistNameH1.textContent = '错误';
+                trackListDiv.innerHTML = '<p style="color: red; text-align: center;">未提供歌单ID。</p>';
+                return;
+            }
+
+            const response = await fetch(`http://localhost:3000/share/${playlistId}`);
+            if (!response.ok) {
+                throw new Error('歌单未找到或加载失败。');
+            }
+            
+            const tracks = await response.json();
+
+            if (tracks.length === 0) {
+                 playlistNameH1.textContent = '歌单为空';
+                 trackListDiv.innerHTML = '<p style="text-align: center;">这个歌单里还没有歌曲。</p>';
+                 return;
+            }
+
+            // Set playlist name from the first track's data
+            playlistNameH1.textContent = tracks[0].playlistName || '分享的歌单';
+            
+            loadingDiv.style.display = 'none'; // Hide loading message
+            trackListDiv.innerHTML = ''; // Clear loading message
+
+            tracks.forEach(track => {
+                const trackDiv = document.createElement('div');
+                trackDiv.className = 'track-item';
+                trackDiv.innerHTML = `
+                    <h3>${track.name}</h3>
+                    <p><strong>曲风:</strong> ${track.genre || 'N/A'} | <strong>节奏:</strong> ${track.rhythm || 'N/A'}</p>
+                    <audio controls src="http://localhost:3000/audio/${track.filename}"></audio>
+                `;
+                trackListDiv.appendChild(trackDiv);
+            });
+
+        } catch (error) {
+            playlistNameH1.textContent = '加载失败';
+            loadingDiv.innerHTML = `<p style="color: red;">${error.message}</p>`;
+            console.error('加载分享歌单失败:', error);
+        }
+    });
+</script>
+
+</body>
+</html> 
