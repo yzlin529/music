@@ -33,7 +33,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
         db.run(`CREATE TABLE IF NOT EXISTS tracks (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
-          original_filename TEXT NOT NULL,
           filename TEXT NOT NULL UNIQUE,
           genre TEXT,
           rhythm TEXT,
@@ -104,8 +103,8 @@ function scanUploadsDirectory() {
             console.log(`发现 ${newFiles.length} 个新音频文件，正在添加到数据库...`);
             
             const stmt = db.prepare(`
-                INSERT INTO tracks (id, name, original_filename, filename, genre, rhythm, category, notes) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tracks (id, name, filename, genre, rhythm, category, notes) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             `);
             
             let addedCount = 0;
@@ -114,7 +113,7 @@ function scanUploadsDirectory() {
                 const baseName = path.basename(filename, path.extname(filename));
                 const notes = `服务器启动时自动扫描添加 - ${new Date().toLocaleString()}`;
                 
-                stmt.run(trackId, baseName, filename, filename, '未分类', '4/4拍', '歌曲', notes, (err) => {
+                stmt.run(trackId, baseName, filename, '未分类', '4/4拍', '歌曲', notes, (err) => {
                     if (err) {
                         console.error(`添加文件 ${filename} 失败:`, err.message);
                     } else {
@@ -160,11 +159,15 @@ function initializeAPIAndStartServer() {
     app.post('/upload', upload.single('audio'), (req, res) => {
       const { name, genre, rhythm, category, notes } = req.body;
       const trackId = uuidv4();
-      const originalFilename = req.file.originalname;
       const uniqueFilename = req.uniqueFilename;
+      
+      // 使用用户输入的名称，如果没有输入则使用文件名（去掉扩展名）
+      const displayName = name && name.trim() 
+        ? name.trim() 
+        : path.basename(req.file.originalname, path.extname(req.file.originalname));
     
-      const stmt = db.prepare('INSERT INTO tracks (id, name, original_filename, filename, genre, rhythm, category, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-      stmt.run(trackId, name || originalFilename, originalFilename, uniqueFilename, genre, rhythm, category, notes, (err) => {
+      const stmt = db.prepare('INSERT INTO tracks (id, name, filename, genre, rhythm, category, notes) VALUES (?, ?, ?, ?, ?, ?, ?)');
+      stmt.run(trackId, displayName, uniqueFilename, genre, rhythm, category, notes, (err) => {
         if (err) {
           console.error('Error inserting data into database', err.message);
           return res.status(500).send({ message: '数据库错误' });
@@ -267,20 +270,44 @@ function initializeAPIAndStartServer() {
       stmt.finalize();
     });
     
-    // Audio stream endpoint
+        // Audio stream endpoint
     app.get('/audio/:filename', (req, res) => {
         // Filename is now a UUID, so no need for complex decoding.
         const audioPath = path.join(__dirname, 'uploads', req.params.filename);
-    
+
         // Check if file exists
         if (!fs.existsSync(audioPath)) {
             return res.status(404).send('File not found.');
         }
-    
+
+        // Determine content type based on file extension
+        const ext = path.extname(req.params.filename).toLowerCase();
+        let contentType = 'audio/mpeg'; // default
+        switch (ext) {
+            case '.mp3':
+                contentType = 'audio/mpeg';
+                break;
+            case '.wav':
+                contentType = 'audio/wav';
+                break;
+            case '.m4a':
+                contentType = 'audio/mp4';
+                break;
+            case '.flac':
+                contentType = 'audio/flac';
+                break;
+            case '.ogg':
+                contentType = 'audio/ogg';
+                break;
+            case '.aac':
+                contentType = 'audio/aac';
+                break;
+        }
+
         const stat = fs.statSync(audioPath);
         const fileSize = stat.size;
         const range = req.headers.range;
-    
+
         if (range) {
             const parts = range.replace(/bytes=/, "").split("-");
             const start = parseInt(parts[0], 10);
@@ -291,14 +318,14 @@ function initializeAPIAndStartServer() {
             'Content-Range': `bytes ${start}-${end}/${fileSize}`,
             'Accept-Ranges': 'bytes',
             'Content-Length': chunksize,
-            'Content-Type': 'audio/mpeg',
+            'Content-Type': contentType,
             };
             res.writeHead(206, head);
             file.pipe(res);
         } else {
             const head = {
             'Content-Length': fileSize,
-            'Content-Type': 'audio/mpeg',
+            'Content-Type': contentType,
             };
             res.writeHead(200, head);
             fs.createReadStream(audioPath).pipe(res);
@@ -316,14 +343,14 @@ function initializeAPIAndStartServer() {
         
         if (keywords.length > 0) {
           const conditions = keywords.map(() => 
-            '(name LIKE ? OR original_filename LIKE ? OR genre LIKE ? OR rhythm LIKE ? OR category LIKE ? OR notes LIKE ?)'
+            '(name LIKE ? OR genre LIKE ? OR rhythm LIKE ? OR category LIKE ? OR notes LIKE ?)'
           );
           
           query = `SELECT * FROM tracks WHERE ${conditions.join(' AND ')} ORDER BY name`;
           
           keywords.forEach(keyword => {
             const searchTerm = `%${keyword}%`;
-            params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+            params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
           });
         }
       }

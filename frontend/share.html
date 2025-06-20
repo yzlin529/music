@@ -70,7 +70,7 @@
                 trackDiv.innerHTML = `
                     <h3>${track.name}</h3>
                     <p><strong>曲风:</strong> ${track.genre || 'N/A'} | <strong>节奏:</strong> ${track.rhythm || 'N/A'}</p>
-                                          <audio controls src="/uploads/${track.filename}"></audio>
+                    <audio controls src="/uploads/${track.filename}"></audio>
                 `;
                 trackListDiv.appendChild(trackDiv);
             });

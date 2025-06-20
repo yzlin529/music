@@ -137,6 +137,62 @@
         display: none;
     }
 
+    /* Table styles */
+    #tracks-table th, #tracks-table td { 
+        padding: 12px; 
+        border: 1px solid #ddd; 
+        text-align: left; 
+    }
+    #tracks-table tr:nth-child(even) { 
+        background-color: #f2f2f2; 
+    }
+    #tracks-table td[contenteditable="true"] { 
+        background-color: #fffde7; 
+        cursor: pointer; 
+    }
+    .table-action-button { 
+        padding: 8px 12px; 
+        background-color: #28a745; 
+        color: white; 
+        border: none; 
+        border-radius: 4px; 
+        cursor: pointer; 
+        font-size: 12px;
+    }
+    .table-action-button:hover { 
+        background-color: #218838; 
+    }
+    .add-row-button {
+        padding: 8px 12px;
+        background-color: #007BFF;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 10px;
+    }
+    .add-row-button:hover {
+        background-color: #0056b3;
+    }
+    .drag-area {
+        border: 2px dashed #ccc;
+        border-radius: 4px;
+        padding: 8px;
+        text-align: center;
+        background-color: #f9f9f9;
+        transition: all 0.3s ease;
+        min-height: 20px;
+        cursor: pointer;
+    }
+    .drag-area.drag-over {
+        border-color: #007BFF;
+        background-color: #e3f2fd;
+    }
+    .new-row {
+        background-color: #f0f8ff;
+    }
+
     #playlist-search-section {
         margin: 20px 0;
         padding: 15px;
@@ -212,36 +268,30 @@
   <!-- Tab 2: Management -->
   <div id="library-management-content" class="tab-content" style="display: none;">
     
-    <div id="upload-section">
-      <h2>人工录入</h2>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-        <div class="form-group" style="grid-column: 1 / -1;">
-          <label for="audio-file">选择音频文件 (可多选)</label>
-          <input type="file" id="audio-file" accept="audio/*" multiple>
-        </div>
-        <div class="form-group">
-          <label for="track-name">名称 (可选)</label>
-          <input type="text" id="track-name" placeholder="例如: Main Riff Idea">
-        </div>
-        <div class.form-group">
-          <label for="track-genre">曲风</label>
-          <input type="text" id="track-genre" placeholder="例如: 流行, 摇滚, 古典">
-        </div>
-        <div class="form-group">
-          <label for="track-rhythm">节奏</label>
-          <input type="text" id="track-rhythm" placeholder="例如: 120bpm, 4/4">
-        </div>
-        <div class="form-group">
-          <label for="track-category">类别</label>
-          <input type="text" id="track-category" placeholder="例如: 人声, 吉他, 鼓">
-        </div>
-        <div class="form-group" style="grid-column: 1 / -1;">
-          <label for="track-notes">备注</label>
-          <input type="text" id="track-notes" placeholder="任何关于此音轨的备注...">
-        </div>
-      </div>
-      <button onclick="uploadAudio()">上传</button>
-      <p id="message" class="message"></p>
+    <h2>音乐库表格编辑</h2>
+    <div class="form-group" style="margin-bottom: 20px;">
+      <input type="search" id="table-search-input" placeholder="按名称、曲风、节奏、类别、备注搜索...">
+    </div>
+
+    <div id="table-status-message" class="message" style="display: none;"></div>
+    <div style="overflow-x:auto; margin-bottom: 40px;">
+      <table id="tracks-table" style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+        <thead>
+          <tr style="background-color: #007BFF; color: white;">
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">名称</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">文件名</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">曲风</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">节奏</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">类别</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">备注</th>
+            <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Data will be populated by JavaScript -->
+        </tbody>
+      </table>
+      <button class="add-row-button" onclick="addNewTableRow()">+ 新增音频</button>
     </div>
 
     <hr>
@@ -256,14 +306,6 @@
         <button onclick="importFromExcel()">上传并更新</button>
         <button onclick="exportToExcel()" style="background-color: #5a6268;">导出为 Excel</button>
         <p id="import-message" class="message"></p>
-    </div>
-
-    <hr>
-
-    <div id="table-edit-section">
-        <h2>直接修改</h2>
-        <p>进入表格视图，直接在线编辑所有音轨的详细信息。</p>
-                        <button onclick="window.location.href='/frontend/table.html'" style="background-color: #17a2b8;">进入表格编辑模式</button>
     </div>
 
   </div>
@@ -334,6 +376,9 @@
         if (tabName === 'music-search') {
             loadLibrary();
         }
+        if (tabName === 'library-management') {
+            fetchAndRenderTable();
+        }
         if (tabName === 'playlist-management') {
             loadPlaylists();
         }
@@ -358,7 +403,7 @@
                     ${track.rhythm ? `<span>${track.rhythm}</span>` : ''}
                     ${track.category ? `<span>${track.category}</span>` : ''}
                 </div>
-                <p><strong>文件名:</strong> ${track.original_filename}</p>
+                <p><strong>文件名:</strong> ${track.filename}</p>
                 <audio controls src="/uploads/${track.filename}"></audio>
                 <button class="add-to-playlist-btn" data-track-id="${track.id}">添加到歌单</button>
             `;
@@ -504,7 +549,7 @@
                         ${track.rhythm ? `<span>${track.rhythm}</span>` : ''}
                         ${track.category ? `<span>${track.category}</span>` : ''}
                     </div>
-                    <p><strong>文件名:</strong> ${track.original_filename || track.name}</p>
+                    <p><strong>文件名:</strong> ${track.filename}</p>
                     <audio controls src="/uploads/${track.filename}"></audio>
                     <button class="add-to-current-playlist-btn" data-track-id="${track.id}" style="background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-top: 10px; float: right;">添加到歌单</button>
                     <div style="clear: both;"></div>
@@ -694,67 +739,7 @@
             });
     }
 
-    function uploadAudio() {
-        const fileInput = document.getElementById('audio-file');
-        const files = fileInput.files;
-        const messageEl = document.getElementById('message');
-        
-        if (files.length === 0) {
-          messageEl.textContent = '请至少选择一个音频文件。';
-          messageEl.style.color = 'red';
-          // Even if there's an error, we refresh the library to ensure sync
-          loadLibrary();
-          return;
-        }
 
-        messageEl.textContent = `开始上传 ${files.length} 个文件...`;
-        messageEl.style.color = 'orange';
-
-        const name = document.getElementById('track-name').value;
-        const genre = document.getElementById('track-genre').value;
-        const rhythm = document.getElementById('track-rhythm').value;
-        const category = document.getElementById('track-category').value;
-        const notes = document.getElementById('track-notes').value;
-
-        const singleFileName = files.length === 1 ? name : '';
-
-        Array.from(files).forEach((file, index) => {
-          const formData = new FormData();
-          formData.append('audio', file);
-          formData.append('name', singleFileName || file.name); 
-          formData.append('genre', genre);
-          formData.append('rhythm', rhythm);
-          formData.append('category', category);
-          formData.append('notes', notes);
-
-          fetch('/upload', {
-            method: 'POST',
-            body: formData
-          })
-          .then(response => response.json())
-          .then(data => {
-            messageEl.textContent = `${file.name} 上传成功!`;
-            messageEl.style.color = 'green';
-          })
-          .catch(error => {
-            console.error(`上传 ${file.name} 失败:`, error);
-            messageEl.textContent = `${file.name} 上传失败。`;
-            messageEl.style.color = 'red';
-          })
-          .finally(() => {
-            // After each file attempt, clear the inputs and refresh the library
-            if (index === files.length - 1) {
-                fileInput.value = ''; // Clear file input
-                document.getElementById('track-name').value = '';
-                document.getElementById('track-genre').value = '';
-                document.getElementById('track-rhythm').value = '';
-                document.getElementById('track-category').value = '';
-                document.getElementById('track-notes').value = '';
-                loadLibrary();
-            }
-          });
-        });
-    }
 
     function importFromExcel() {
         const fileInput = document.getElementById('excel-file-input');
@@ -782,6 +767,11 @@
           messageEl.textContent = data.message;
           messageEl.style.color = 'green';
           loadLibrary(); // Refresh library to show changes
+          // Also refresh table if on management tab
+          const managementTab = document.getElementById('library-management-content');
+          if (managementTab && managementTab.style.display !== 'none') {
+              fetchAndRenderTable();
+          }
         })
         .catch(error => {
           console.error('从Excel导入失败:', error);
@@ -807,7 +797,318 @@
 
         // Setup playlist search functionality
         setupPlaylistSearch();
+
+        // Setup table search functionality
+        setupTableSearch();
     });
+
+    // --- Table Management Functions ---
+    function setupTableSearch() {
+        const searchInput = document.getElementById('table-search-input');
+        if (!searchInput) return;
+        
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                fetchAndRenderTable(e.target.value);
+            }, 300); // Debounce search
+        });
+    }
+
+    function fetchAndRenderTable(searchTerm = '') {
+        const tableBody = document.querySelector('#tracks-table tbody');
+        if (!tableBody) return;
+        
+        let url = '/list';
+        if (searchTerm && searchTerm.trim() !== '') {
+            url += `?search=${encodeURIComponent(searchTerm)}`;
+        }
+
+        fetch(url)
+            .then(response => response.json())
+            .then(tracks => {
+                tableBody.innerHTML = ''; // Clear existing table
+                tracks.forEach(track => {
+                    const row = createTableRow(track, false);
+                    tableBody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error('获取媒体库失败:', error);
+                tableBody.innerHTML = '<tr><td colspan="7">加载数据失败，请检查后端服务。</td></tr>';
+            });
+    }
+
+    function saveTableRow(button) {
+        const row = button.closest('tr');
+        const id = row.getAttribute('data-id');
+        const cells = row.querySelectorAll('td[contenteditable="true"]');
+        
+        const updatedData = {};
+        cells.forEach(cell => {
+            const field = cell.getAttribute('data-field');
+            updatedData[field] = cell.textContent;
+        });
+
+        fetch(`/track/${id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedData),
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.message || '保存失败') });
+            }
+            return response.json();
+        })
+        .then(data => {
+            showTableStatus(data.message, 'success');
+        })
+        .catch(error => {
+            console.error('更新失败:', error);
+            showTableStatus(error.message, 'error');
+        });
+    }
+
+    function showTableStatus(message, type) {
+        const statusEl = document.getElementById('table-status-message');
+        if (!statusEl) return;
+        
+        statusEl.textContent = message;
+        statusEl.style.color = type === 'success' ? 'green' : 'red';
+        statusEl.style.display = 'block';
+        setTimeout(() => {
+            statusEl.style.display = 'none';
+        }, 4000);
+    }
+
+    function createTableRow(track, isNew = false) {
+        const row = document.createElement('tr');
+        if (isNew) {
+            row.classList.add('new-row');
+            row.setAttribute('data-is-new', 'true');
+        } else {
+            row.setAttribute('data-id', track.id);
+        }
+        
+        const nameCell = document.createElement('td');
+        nameCell.setAttribute('contenteditable', 'true');
+        nameCell.setAttribute('data-field', 'name');
+        nameCell.textContent = track?.name || '';
+        
+        if (isNew) {
+            nameCell.classList.add('drag-area');
+            nameCell.innerHTML = track?.name || '拖拽音频文件到这里或点击选择(支持多选)';
+            setupDragAndDrop(nameCell, row);
+        }
+        
+        row.appendChild(nameCell);
+        
+        // 文件名列
+        const filenameCell = document.createElement('td');
+        filenameCell.setAttribute('contenteditable', 'false');
+        filenameCell.style.backgroundColor = '#f5f5f5';
+        filenameCell.style.color = '#666';
+        filenameCell.textContent = track?.filename || (isNew ? '待上传' : '');
+        row.appendChild(filenameCell);
+        
+        // 其他字段
+        ['genre', 'rhythm', 'category', 'notes'].forEach(field => {
+            const cell = document.createElement('td');
+            cell.setAttribute('contenteditable', 'true');
+            cell.setAttribute('data-field', field);
+            cell.textContent = track?.[field] || '';
+            row.appendChild(cell);
+        });
+        
+        // 操作按钮
+        const actionCell = document.createElement('td');
+        const button = document.createElement('button');
+        button.className = 'table-action-button';
+        button.textContent = isNew ? '新增' : '保存';
+        button.onclick = isNew ? () => createNewTrack(button) : () => saveTableRow(button);
+        actionCell.appendChild(button);
+        row.appendChild(actionCell);
+        
+        return row;
+    }
+
+    function addNewTableRow() {
+        const tableBody = document.querySelector('#tracks-table tbody');
+        if (!tableBody) return;
+        
+        const newRow = createTableRow(null, true);
+        tableBody.appendChild(newRow);
+    }
+
+    function setupDragAndDrop(cell, row) {
+        // 文件拖拽功能
+        cell.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            cell.classList.add('drag-over');
+        });
+        
+        cell.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            cell.classList.remove('drag-over');
+        });
+        
+        cell.addEventListener('drop', (e) => {
+            e.preventDefault();
+            cell.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                // 检查是否都是音频文件
+                const audioFiles = Array.from(files).filter(file => file.type.startsWith('audio/'));
+                
+                if (audioFiles.length === 0) {
+                    showTableStatus('请拖拽音频文件', 'error');
+                    return;
+                }
+                
+                if (audioFiles.length < files.length) {
+                    showTableStatus(`已忽略 ${files.length - audioFiles.length} 个非音频文件`, 'error');
+                }
+                
+                // 处理所有音频文件
+                handleMultipleFilesForNewRows(audioFiles, row);
+            }
+        });
+        
+        // 点击选择文件
+        cell.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'audio/*';
+            input.multiple = true; // 支持多选
+            input.onchange = (e) => {
+                if (e.target.files.length > 0) {
+                    handleMultipleFilesForNewRows(e.target.files, row);
+                }
+            };
+            input.click();
+        });
+    }
+
+    function handleFileForNewRow(file, row) {
+        // 自动填充名称（去掉扩展名）
+        const nameCell = row.querySelector('[data-field="name"]');
+        const filenameCell = row.cells[1]; // 文件名列
+        
+        const baseName = file.name.replace(/\.[^/.]+$/, '');
+        nameCell.textContent = baseName;
+        nameCell.classList.remove('drag-area');
+        nameCell.style.border = 'none';
+        nameCell.style.backgroundColor = '#fffde7';
+        
+        filenameCell.textContent = '准备上传: ' + file.name;
+        
+        // 将文件对象存储到行元素上
+        row._fileToUpload = file;
+    }
+
+    function handleMultipleFilesForNewRows(files, currentRow) {
+        const tableBody = document.querySelector('#tracks-table tbody');
+        if (!tableBody) return;
+        
+        // 获取当前行已填写的默认值（用于批量应用）
+        const defaultValues = {
+            genre: currentRow.querySelector('[data-field="genre"]')?.textContent.trim() || '',
+            rhythm: currentRow.querySelector('[data-field="rhythm"]')?.textContent.trim() || '',
+            category: currentRow.querySelector('[data-field="category"]')?.textContent.trim() || '',
+            notes: currentRow.querySelector('[data-field="notes"]')?.textContent.trim() || ''
+        };
+        
+        // 处理第一个文件到当前行
+        if (files.length > 0) {
+            const firstFile = files[0];
+            handleFileForNewRow(firstFile, currentRow);
+        }
+        
+        // 为剩余文件创建新行
+        for (let i = 1; i < files.length; i++) {
+            const file = files[i];
+            const newRow = createTableRow(null, true);
+            tableBody.appendChild(newRow);
+            
+            // 处理文件到新行
+            handleFileForNewRow(file, newRow);
+            
+            // 如果有默认值，自动填充到新行
+            if (defaultValues.genre || defaultValues.rhythm || defaultValues.category || defaultValues.notes) {
+                Object.keys(defaultValues).forEach(field => {
+                    if (defaultValues[field]) {
+                        const cell = newRow.querySelector(`[data-field="${field}"]`);
+                        if (cell) {
+                            cell.textContent = defaultValues[field];
+                        }
+                    }
+                });
+            }
+        }
+        
+        // 显示状态信息
+        if (files.length > 1) {
+            showTableStatus(`已选择 ${files.length} 个音频文件，${defaultValues.genre ? '已自动应用默认值，' : ''}请编辑信息后点击"新增"按钮`, 'success');
+        }
+    }
+
+    function createNewTrack(button) {
+        const row = button.closest('tr');
+        const fileToUpload = row._fileToUpload;
+        
+        if (!fileToUpload) {
+            showTableStatus('请先选择音频文件', 'error');
+            return;
+        }
+        
+        const cells = row.querySelectorAll('td[contenteditable="true"]');
+        const trackData = {};
+        
+        cells.forEach(cell => {
+            const field = cell.getAttribute('data-field');
+            trackData[field] = cell.textContent.trim();
+        });
+        
+        if (!trackData.name) {
+            showTableStatus('名称不能为空', 'error');
+            return;
+        }
+        
+        // 创建FormData上传文件
+        const formData = new FormData();
+        formData.append('audio', fileToUpload);
+        formData.append('name', trackData.name);
+        formData.append('genre', trackData.genre || '');
+        formData.append('rhythm', trackData.rhythm || '');
+        formData.append('category', trackData.category || '');
+        formData.append('notes', trackData.notes || '');
+        
+        // 禁用按钮，显示上传中
+        button.disabled = true;
+        button.textContent = '上传中...';
+        
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            showTableStatus('音频上传成功！', 'success');
+            // 刷新表格
+            fetchAndRenderTable();
+        })
+        .catch(error => {
+            console.error('上传失败:', error);
+            showTableStatus('上传失败，请重试', 'error');
+            button.disabled = false;
+            button.textContent = '新增';
+        });
+    }
 </script>
 
 </body>
